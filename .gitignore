@@ -1,0 +1,10 @@
+# Database — never commit real data
+db/dev.db
+
+# Environment variables — never commit API keys
+.env
+__pycache__/
+*.pyc
+.DS_Store
+venv/
+*.egg-info/
