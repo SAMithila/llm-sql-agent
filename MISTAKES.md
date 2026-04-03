@@ -2,6 +2,7 @@
 
 ## Bug 1: LLM hallucinating view columns
 **Date:** Phase 4
+
 **Symptom:** "What is the total revenue by product category?" failed 3 retries
 **Root cause:** LLM treated `order_revenue` view as a base table and tried to 
 access `oi.unit_price` and `oi.product_id` which don't exist in the view
