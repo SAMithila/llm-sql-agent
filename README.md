@@ -32,8 +32,8 @@ User Question → Planner Agent → Schema Inspector → SQL Generator
 ## Project Status
 - [x] Phase 1 — Database foundation (Northwind)
 - [x] Phase 2 — Core tools (in progress)
-- [ ] Phase 3 — Guardrails
-- [ ] Phase 4 — LangGraph agent
+- [x] Phase 3 — Guardrails
+- [x] Phase 4 — LangGraph agent
 - [ ] Phase 5 — Observability
 - [ ] Phase 6 — Evaluation framework
 - [ ] Phase 7 — API + UI
