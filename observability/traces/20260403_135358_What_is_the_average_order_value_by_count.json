@@ -1,0 +1,183 @@
+{
+  "metadata": {
+    "timestamp": "2026-04-03T13:53:58.126162",
+    "question": "What is the average order value by country?",
+    "user_id": "alice",
+    "success": true,
+    "had_error": false,
+    "retry_count": 0
+  },
+  "pipeline": {
+    "clarification_needed": false,
+    "schema_tables": [
+      "orders"
+    ],
+    "generated_sql": "SELECT o.ship_country, AVG(orv.revenue) AS average_order_value FROM orders o JOIN order_revenue orv ON o.order_id = orv.order_id GROUP BY o.ship_country LIMIT 100;",
+    "sql_confidence": "high",
+    "sql_explanation": "This query calculates the average order value for each country by joining the orders table with the order_revenue view and grouping the results by the ship_country.",
+    "sql_assumptions": "The average order value is calculated based on the revenue from the order_revenue view.",
+    "validation_passed": true,
+    "guardrails_passed": true,
+    "execution_success": true
+  },
+  "validation": {
+    "valid": true,
+    "checks": {
+      "safety": {
+        "passed": true,
+        "details": "All safety checks passed"
+      },
+      "syntax": {
+        "passed": true,
+        "details": "Syntax is valid"
+      },
+      "complexity": {
+        "passed": true,
+        "score": 5,
+        "tier": "medium",
+        "details": "Complexity score: 5/10 (medium)"
+      }
+    },
+    "error": null
+  },
+  "guardrails": {
+    "permissions": {
+      "allowed": true,
+      "user_id": "alice",
+      "role": "analyst",
+      "tables_in_query": [
+        "order_revenue",
+        "orders"
+      ],
+      "denied_tables": [],
+      "reason": "Access granted"
+    },
+    "limits": {
+      "allowed": true,
+      "checks": {
+        "query_length": {
+          "passed": true,
+          "details": "163 chars (limit: 5000)"
+        },
+        "rate_limit": {
+          "passed": true,
+          "details": "6 queries in last hour (44 remaining)",
+          "remaining": 44
+        },
+        "row_limit": {
+          "passed": true,
+          "details": "LIMIT clause present"
+        }
+      },
+      "reason": "All limits passed"
+    },
+    "safety": {
+      "safe": true,
+      "checks": {
+        "injection": {
+          "passed": true,
+          "threat": null,
+          "details": "No injection patterns detected"
+        },
+        "exfiltration": {
+          "passed": true,
+          "threat": null,
+          "details": "No exfiltration patterns detected"
+        }
+      },
+      "reason": "Safe to execute"
+    }
+  },
+  "execution": {
+    "row_count": 1,
+    "execution_ms": 2,
+    "truncated": false,
+    "columns": [
+      "ship_country",
+      "average_order_value"
+    ]
+  },
+  "response": {
+    "summary": "The average order value across all countries is $1,231.22. However, the data does not provide a breakdown by individual countries.",
+    "key_insights": [
+      "The overall average order value is $1,231.22, indicating a relatively high spending per order.",
+      "The data returned only one row, suggesting either a lack of country-specific data or an issue with data categorization by country."
+    ]
+  },
+  "error": {
+    "message": null,
+    "stage": null
+  },
+  "trace": [
+    {
+      "node": "clarify",
+      "message": "Checking question: 'What is the average order value by country?'",
+      "timestamp": 1775202833.975
+    },
+    {
+      "node": "clarify",
+      "message": "Question is clear \u2014 proceeding",
+      "timestamp": 1775202833.975
+    },
+    {
+      "node": "schema",
+      "message": "Retrieving relevant schema",
+      "timestamp": 1775202833.975
+    },
+    {
+      "node": "schema",
+      "message": "Found relevant tables: ['orders']",
+      "timestamp": 1775202833.976
+    },
+    {
+      "node": "generate",
+      "message": "Generating SQL (attempt 1)",
+      "timestamp": 1775202833.977
+    },
+    {
+      "node": "generate",
+      "message": "SQL generated (confidence: high)",
+      "timestamp": 1775202835.672
+    },
+    {
+      "node": "validate",
+      "message": "Validating SQL",
+      "timestamp": 1775202835.673
+    },
+    {
+      "node": "validate",
+      "message": "Valid \u2014 complexity: 5/10 (medium)",
+      "timestamp": 1775202835.675
+    },
+    {
+      "node": "guardrails",
+      "message": "Running guardrail checks",
+      "timestamp": 1775202835.676
+    },
+    {
+      "node": "guardrails",
+      "message": "All guardrails passed \u2713",
+      "timestamp": 1775202835.676
+    },
+    {
+      "node": "execute",
+      "message": "Executing query",
+      "timestamp": 1775202835.676
+    },
+    {
+      "node": "execute",
+      "message": "Success \u2014 1 rows in 2ms",
+      "timestamp": 1775202835.679
+    },
+    {
+      "node": "format",
+      "message": "Formatting response",
+      "timestamp": 1775202835.679
+    },
+    {
+      "node": "format",
+      "message": "Response formatted successfully",
+      "timestamp": 1775202838.125
+    }
+  ]
+}

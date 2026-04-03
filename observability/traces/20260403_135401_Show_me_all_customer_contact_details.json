@@ -1,0 +1,135 @@
+{
+  "metadata": {
+    "timestamp": "2026-04-03T13:54:01.610585",
+    "question": "Show me all customer contact details",
+    "user_id": "bob",
+    "success": false,
+    "had_error": true,
+    "retry_count": 0
+  },
+  "pipeline": {
+    "clarification_needed": false,
+    "schema_tables": [
+      "customers"
+    ],
+    "generated_sql": "SELECT c.customer_id, c.company_name, c.contact_name, c.contact_title, c.country, c.city, c.phone FROM customers c LIMIT 100",
+    "sql_confidence": "high",
+    "sql_explanation": "This query retrieves all customer contact details including customer ID, company name, contact name, contact title, country, city, and phone number from the customers table, limited to 100 rows.",
+    "sql_assumptions": "Assuming 'all customer contact details' refers to the columns related to contact information in the customers table.",
+    "validation_passed": true,
+    "guardrails_passed": false,
+    "execution_success": false
+  },
+  "validation": {
+    "valid": true,
+    "checks": {
+      "safety": {
+        "passed": true,
+        "details": "All safety checks passed"
+      },
+      "syntax": {
+        "passed": true,
+        "details": "Syntax is valid"
+      },
+      "complexity": {
+        "passed": true,
+        "score": 2,
+        "tier": "simple",
+        "details": "Complexity score: 2/10 (simple)"
+      }
+    },
+    "error": null
+  },
+  "guardrails": {
+    "permissions": {
+      "allowed": false,
+      "user_id": "bob",
+      "role": "viewer",
+      "tables_in_query": [
+        "customers"
+      ],
+      "denied_tables": [
+        "customers"
+      ],
+      "reason": "Access denied. Your role 'viewer' cannot access: customers"
+    },
+    "limits": null,
+    "safety": null
+  },
+  "execution": {
+    "row_count": 0,
+    "execution_ms": 0,
+    "truncated": false,
+    "columns": []
+  },
+  "response": {
+    "summary": "",
+    "key_insights": []
+  },
+  "error": {
+    "message": "Access denied. Your role 'viewer' cannot access: customers",
+    "stage": "permission"
+  },
+  "trace": [
+    {
+      "node": "clarify",
+      "message": "Checking question: 'Show me all customer contact details'",
+      "timestamp": 1775202839.967
+    },
+    {
+      "node": "clarify",
+      "message": "Question is clear \u2014 proceeding",
+      "timestamp": 1775202839.967
+    },
+    {
+      "node": "schema",
+      "message": "Retrieving relevant schema",
+      "timestamp": 1775202839.967
+    },
+    {
+      "node": "schema",
+      "message": "Found relevant tables: ['customers']",
+      "timestamp": 1775202839.968
+    },
+    {
+      "node": "generate",
+      "message": "Generating SQL (attempt 1)",
+      "timestamp": 1775202839.968
+    },
+    {
+      "node": "generate",
+      "message": "SQL generated (confidence: high)",
+      "timestamp": 1775202841.607
+    },
+    {
+      "node": "validate",
+      "message": "Validating SQL",
+      "timestamp": 1775202841.608
+    },
+    {
+      "node": "validate",
+      "message": "Valid \u2014 complexity: 2/10 (simple)",
+      "timestamp": 1775202841.609
+    },
+    {
+      "node": "guardrails",
+      "message": "Running guardrail checks",
+      "timestamp": 1775202841.609
+    },
+    {
+      "node": "guardrails",
+      "message": "PERMISSION DENIED: Access denied. Your role 'viewer' cannot access: customers",
+      "timestamp": 1775202841.61
+    },
+    {
+      "node": "format",
+      "message": "Formatting response",
+      "timestamp": 1775202841.61
+    },
+    {
+      "node": "format",
+      "message": "Error response formatted for stage: permission",
+      "timestamp": 1775202841.61
+    }
+  ]
+}

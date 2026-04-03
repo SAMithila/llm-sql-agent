@@ -1,0 +1,137 @@
+{
+  "metadata": {
+    "timestamp": "2026-04-03T13:53:53.959616",
+    "question": "Which employee processed the most orders?",
+    "user_id": "alice",
+    "success": false,
+    "had_error": true,
+    "retry_count": 0
+  },
+  "pipeline": {
+    "clarification_needed": false,
+    "schema_tables": [
+      "employees",
+      "orders"
+    ],
+    "generated_sql": "SELECT e.employee_id, e.first_name, e.last_name, COUNT(o.order_id) AS order_count FROM employees e JOIN orders o ON e.employee_id = o.employee_id GROUP BY e.employee_id ORDER BY order_count DESC LIMIT 1;",
+    "sql_confidence": "high",
+    "sql_explanation": "This query joins the employees and orders tables to count the number of orders processed by each employee. It then orders the results by the count of orders in descending order and limits the result to the top employee who processed the most orders.",
+    "sql_assumptions": "Assumes 'processed' means the employee associated with the order in the orders table.",
+    "validation_passed": true,
+    "guardrails_passed": false,
+    "execution_success": false
+  },
+  "validation": {
+    "valid": true,
+    "checks": {
+      "safety": {
+        "passed": true,
+        "details": "All safety checks passed"
+      },
+      "syntax": {
+        "passed": true,
+        "details": "Syntax is valid"
+      },
+      "complexity": {
+        "passed": true,
+        "score": 6,
+        "tier": "medium",
+        "details": "Complexity score: 6/10 (medium)"
+      }
+    },
+    "error": null
+  },
+  "guardrails": {
+    "permissions": {
+      "allowed": false,
+      "user_id": "alice",
+      "role": "analyst",
+      "tables_in_query": [
+        "employees",
+        "orders"
+      ],
+      "denied_tables": [
+        "employees"
+      ],
+      "reason": "Access denied. Your role 'analyst' cannot access: employees"
+    },
+    "limits": null,
+    "safety": null
+  },
+  "execution": {
+    "row_count": 0,
+    "execution_ms": 0,
+    "truncated": false,
+    "columns": []
+  },
+  "response": {
+    "summary": "",
+    "key_insights": []
+  },
+  "error": {
+    "message": "Access denied. Your role 'analyst' cannot access: employees",
+    "stage": "permission"
+  },
+  "trace": [
+    {
+      "node": "clarify",
+      "message": "Checking question: 'Which employee processed the most orders?'",
+      "timestamp": 1775202832.102
+    },
+    {
+      "node": "clarify",
+      "message": "Question is clear \u2014 proceeding",
+      "timestamp": 1775202832.102
+    },
+    {
+      "node": "schema",
+      "message": "Retrieving relevant schema",
+      "timestamp": 1775202832.103
+    },
+    {
+      "node": "schema",
+      "message": "Found relevant tables: ['employees', 'orders']",
+      "timestamp": 1775202832.106
+    },
+    {
+      "node": "generate",
+      "message": "Generating SQL (attempt 1)",
+      "timestamp": 1775202832.106
+    },
+    {
+      "node": "generate",
+      "message": "SQL generated (confidence: high)",
+      "timestamp": 1775202833.955
+    },
+    {
+      "node": "validate",
+      "message": "Validating SQL",
+      "timestamp": 1775202833.957
+    },
+    {
+      "node": "validate",
+      "message": "Valid \u2014 complexity: 6/10 (medium)",
+      "timestamp": 1775202833.958
+    },
+    {
+      "node": "guardrails",
+      "message": "Running guardrail checks",
+      "timestamp": 1775202833.958
+    },
+    {
+      "node": "guardrails",
+      "message": "PERMISSION DENIED: Access denied. Your role 'analyst' cannot access: employees",
+      "timestamp": 1775202833.958
+    },
+    {
+      "node": "format",
+      "message": "Formatting response",
+      "timestamp": 1775202833.959
+    },
+    {
+      "node": "format",
+      "message": "Error response formatted for stage: permission",
+      "timestamp": 1775202833.959
+    }
+  ]
+}
