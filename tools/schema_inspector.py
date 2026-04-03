@@ -148,7 +148,7 @@ def search_schema(question: str) -> dict:
     TABLE_KEYWORDS = {
         "customers":   ["customer", "client", "buyer", "company", "contact", "who bought"],
         "orders":      ["order", "purchase", "sale", "bought", "transaction", "shipped", "pending"],
-        "order_items": ["item", "line item", "product in order", "quantity", "discount"],
+        "order_items": ["item", "line item", "product in order", "quantity", "discount", "revenue", "category"],
         "products":    ["product", "item", "goods", "stock", "inventory", "price", "sell"],
         "employees":   ["employee", "staff", "rep", "salesperson", "who processed", "manager"],
         "categories":  ["category", "type", "group", "kind", "segment"],

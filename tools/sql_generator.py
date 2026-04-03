@@ -62,8 +62,14 @@ Respond ONLY with valid JSON in this exact structure:
 }
 
 Nothing else. No markdown. No code blocks. Just the JSON object.
-"""
 
+## Views available (use these when relevant)
+- order_revenue: columns = order_id, customer_id, employee_id, order_date, status, revenue
+- product_sales_summary: columns = product_id, product_name, category_name, total_units_sold, total_revenue
+
+For revenue by category queries, JOIN order_items with products and categories directly.
+Do NOT treat views as base tables with columns they don't have.
+"""
 
 # ------------------------------------------------------------------
 # Tool 2: generate_sql()
