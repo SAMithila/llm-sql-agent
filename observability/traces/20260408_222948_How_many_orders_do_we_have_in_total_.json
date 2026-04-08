@@ -1,0 +1,181 @@
+{
+  "metadata": {
+    "timestamp": "2026-04-08T22:29:48.793841",
+    "question": "How many orders do we have in total?",
+    "user_id": "alice",
+    "success": true,
+    "had_error": false,
+    "retry_count": 0
+  },
+  "pipeline": {
+    "clarification_needed": false,
+    "schema_tables": [
+      "orders"
+    ],
+    "generated_sql": "SELECT COUNT(o.order_id) AS total_orders FROM orders o LIMIT 100;",
+    "sql_confidence": "high",
+    "sql_explanation": "This query counts the total number of orders in the orders table.",
+    "sql_assumptions": "The question asks for the total number of orders without any specific conditions.",
+    "validation_passed": true,
+    "guardrails_passed": true,
+    "execution_success": true
+  },
+  "validation": {
+    "valid": true,
+    "checks": {
+      "safety": {
+        "passed": true,
+        "details": "All safety checks passed"
+      },
+      "syntax": {
+        "passed": true,
+        "details": "Syntax is valid"
+      },
+      "complexity": {
+        "passed": true,
+        "score": 2,
+        "tier": "simple",
+        "details": "Complexity score: 2/10 (simple)"
+      }
+    },
+    "error": null
+  },
+  "guardrails": {
+    "permissions": {
+      "allowed": true,
+      "user_id": "alice",
+      "role": "analyst",
+      "tables_in_query": [
+        "orders"
+      ],
+      "denied_tables": [],
+      "reason": "Access granted"
+    },
+    "limits": {
+      "allowed": true,
+      "checks": {
+        "query_length": {
+          "passed": true,
+          "details": "65 chars (limit: 5000)"
+        },
+        "rate_limit": {
+          "passed": true,
+          "details": "0 queries in last hour (50 remaining)",
+          "remaining": 50
+        },
+        "row_limit": {
+          "passed": true,
+          "details": "LIMIT clause present"
+        }
+      },
+      "reason": "All limits passed"
+    },
+    "safety": {
+      "safe": true,
+      "checks": {
+        "injection": {
+          "passed": true,
+          "threat": null,
+          "details": "No injection patterns detected"
+        },
+        "exfiltration": {
+          "passed": true,
+          "threat": null,
+          "details": "No exfiltration patterns detected"
+        }
+      },
+      "reason": "Safe to execute"
+    }
+  },
+  "execution": {
+    "row_count": 1,
+    "execution_ms": 1,
+    "truncated": false,
+    "columns": [
+      "total_orders"
+    ]
+  },
+  "response": {
+    "summary": "We have a total of 200 orders in the database. This represents the complete count of orders without any filters applied.",
+    "key_insights": [
+      "The total number of orders is 200, indicating the overall volume of transactions recorded.",
+      "With 200 orders, this data point can serve as a baseline for measuring future growth or decline in order volume."
+    ]
+  },
+  "error": {
+    "message": null,
+    "stage": null
+  },
+  "trace": [
+    {
+      "node": "clarify",
+      "message": "Checking question: 'How many orders do we have in total?'",
+      "timestamp": 1775665781.797
+    },
+    {
+      "node": "clarify",
+      "message": "Question is clear \u2014 proceeding",
+      "timestamp": 1775665781.797
+    },
+    {
+      "node": "schema",
+      "message": "Retrieving relevant schema",
+      "timestamp": 1775665781.798
+    },
+    {
+      "node": "schema",
+      "message": "Found relevant tables: ['orders']",
+      "timestamp": 1775665781.799
+    },
+    {
+      "node": "generate",
+      "message": "Generating SQL (attempt 1)",
+      "timestamp": 1775665781.799
+    },
+    {
+      "node": "generate",
+      "message": "SQL generated (confidence: high)",
+      "timestamp": 1775665786.057
+    },
+    {
+      "node": "validate",
+      "message": "Validating SQL",
+      "timestamp": 1775665786.061
+    },
+    {
+      "node": "validate",
+      "message": "Valid \u2014 complexity: 2/10 (simple)",
+      "timestamp": 1775665786.063
+    },
+    {
+      "node": "guardrails",
+      "message": "Running guardrail checks",
+      "timestamp": 1775665786.064
+    },
+    {
+      "node": "guardrails",
+      "message": "All guardrails passed \u2713",
+      "timestamp": 1775665786.065
+    },
+    {
+      "node": "execute",
+      "message": "Executing query",
+      "timestamp": 1775665786.066
+    },
+    {
+      "node": "execute",
+      "message": "Success \u2014 1 rows in 1ms",
+      "timestamp": 1775665786.067
+    },
+    {
+      "node": "format",
+      "message": "Formatting response",
+      "timestamp": 1775665786.068
+    },
+    {
+      "node": "format",
+      "message": "Response formatted successfully",
+      "timestamp": 1775665788.793
+    }
+  ]
+}
