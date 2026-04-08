@@ -1,0 +1,184 @@
+{
+  "metadata": {
+    "timestamp": "2026-04-08T22:07:15.612728",
+    "question": "Which customers have not placed any orders?",
+    "user_id": "alice",
+    "success": true,
+    "had_error": false,
+    "retry_count": 0
+  },
+  "pipeline": {
+    "clarification_needed": false,
+    "schema_tables": [
+      "customers",
+      "orders"
+    ],
+    "generated_sql": "SELECT c.customer_id, c.company_name FROM customers c LEFT JOIN orders o ON c.customer_id = o.customer_id WHERE o.order_id IS NULL LIMIT 100;",
+    "sql_confidence": "high",
+    "sql_explanation": "This query selects customers who have not placed any orders by performing a LEFT JOIN between the customers and orders tables and filtering for cases where there is no matching order_id.",
+    "sql_assumptions": "Assumes that a customer with no orders will have no matching order_id in the orders table.",
+    "validation_passed": true,
+    "guardrails_passed": true,
+    "execution_success": true
+  },
+  "validation": {
+    "valid": true,
+    "checks": {
+      "safety": {
+        "passed": true,
+        "details": "All safety checks passed"
+      },
+      "syntax": {
+        "passed": true,
+        "details": "Syntax is valid"
+      },
+      "complexity": {
+        "passed": true,
+        "score": 2,
+        "tier": "simple",
+        "details": "Complexity score: 2/10 (simple)"
+      }
+    },
+    "error": null
+  },
+  "guardrails": {
+    "permissions": {
+      "allowed": true,
+      "user_id": "alice",
+      "role": "analyst",
+      "tables_in_query": [
+        "customers",
+        "orders"
+      ],
+      "denied_tables": [],
+      "reason": "Access granted"
+    },
+    "limits": {
+      "allowed": true,
+      "checks": {
+        "query_length": {
+          "passed": true,
+          "details": "141 chars (limit: 5000)"
+        },
+        "rate_limit": {
+          "passed": true,
+          "details": "16 queries in last hour (34 remaining)",
+          "remaining": 34
+        },
+        "row_limit": {
+          "passed": true,
+          "details": "LIMIT clause present"
+        }
+      },
+      "reason": "All limits passed"
+    },
+    "safety": {
+      "safe": true,
+      "checks": {
+        "injection": {
+          "passed": true,
+          "threat": null,
+          "details": "No injection patterns detected"
+        },
+        "exfiltration": {
+          "passed": true,
+          "threat": null,
+          "details": "No exfiltration patterns detected"
+        }
+      },
+      "reason": "Safe to execute"
+    }
+  },
+  "execution": {
+    "row_count": 0,
+    "execution_ms": 1,
+    "truncated": false,
+    "columns": [
+      "customer_id",
+      "company_name"
+    ]
+  },
+  "response": {
+    "summary": "No results found for your question. The data may not exist for the criteria specified.",
+    "key_insights": [
+      "Try broadening your filters (wider date range, different category)",
+      "Double-check the spelling of any names or IDs you specified"
+    ]
+  },
+  "error": {
+    "message": null,
+    "stage": null
+  },
+  "trace": [
+    {
+      "node": "clarify",
+      "message": "Checking question: 'Which customers have not placed any orders?'",
+      "timestamp": 1775664433.244
+    },
+    {
+      "node": "clarify",
+      "message": "Question is clear \u2014 proceeding",
+      "timestamp": 1775664433.244
+    },
+    {
+      "node": "schema",
+      "message": "Retrieving relevant schema",
+      "timestamp": 1775664433.244
+    },
+    {
+      "node": "schema",
+      "message": "Found relevant tables: ['customers', 'orders']",
+      "timestamp": 1775664433.246
+    },
+    {
+      "node": "generate",
+      "message": "Generating SQL (attempt 1)",
+      "timestamp": 1775664433.247
+    },
+    {
+      "node": "generate",
+      "message": "SQL generated (confidence: high)",
+      "timestamp": 1775664435.605
+    },
+    {
+      "node": "validate",
+      "message": "Validating SQL",
+      "timestamp": 1775664435.607
+    },
+    {
+      "node": "validate",
+      "message": "Valid \u2014 complexity: 2/10 (simple)",
+      "timestamp": 1775664435.608
+    },
+    {
+      "node": "guardrails",
+      "message": "Running guardrail checks",
+      "timestamp": 1775664435.609
+    },
+    {
+      "node": "guardrails",
+      "message": "All guardrails passed \u2713",
+      "timestamp": 1775664435.609
+    },
+    {
+      "node": "execute",
+      "message": "Executing query",
+      "timestamp": 1775664435.61
+    },
+    {
+      "node": "execute",
+      "message": "Success \u2014 0 rows in 1ms",
+      "timestamp": 1775664435.611
+    },
+    {
+      "node": "format",
+      "message": "Formatting response",
+      "timestamp": 1775664435.612
+    },
+    {
+      "node": "format",
+      "message": "Response formatted successfully",
+      "timestamp": 1775664435.612
+    }
+  ]
+}

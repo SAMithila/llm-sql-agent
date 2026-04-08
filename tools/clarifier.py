@@ -50,11 +50,14 @@ AMBIGUOUS_PATTERNS = [
     (r"\bmost popular\b",      "metric",       "Popular by units sold or by number of orders?"),
     (r"\bworst\b",             "metric",       "Worst by what measure — lowest revenue or fewest orders?"),
     (r"\bperforming\b",        "metric",       "How do you define performance — revenue or order count?"),
+    (r"\bdoing well\b",      "metric", "What defines 'doing well' — revenue, units sold, or growth?"),
+    (r"\bperforming well\b", "metric", "What metric defines 'performing well'?"),
 
     # Scope ambiguity
     (r"\ball\b",               "scope",        "Should discontinued products/cancelled orders be included?"),
     (r"\bactive\b",            "scope",        "What defines 'active' — ordered in last 90 days?"),
     (r"\bcurrent\b",           "scope",        "Does 'current' mean today or this month?"),
+
 ]
 
 
