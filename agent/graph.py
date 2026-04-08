@@ -281,7 +281,6 @@ def format_node(state: AgentState) -> AgentState:
     state.add_trace("format", "Response formatted successfully")
     return state
 
-
 # ------------------------------------------------------------------
 # Routing functions — decide which node to go to next
 # ------------------------------------------------------------------

@@ -57,7 +57,6 @@ AMBIGUOUS_PATTERNS = [
     (r"\ball\b",               "scope",        "Should discontinued products/cancelled orders be included?"),
     (r"\bactive\b",            "scope",        "What defines 'active' — ordered in last 90 days?"),
     (r"\bcurrent\b",           "scope",        "Does 'current' mean today or this month?"),
-
 ]
 
 
