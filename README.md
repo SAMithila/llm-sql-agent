@@ -7,6 +7,7 @@
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.110-teal)
 ![Accuracy](https://img.shields.io/badge/Accuracy-96%25-brightgreen)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
+![Tests](https://img.shields.io/badge/Tests-75%20passed-brightgreen)
 
 ---
 
