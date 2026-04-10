@@ -10,6 +10,7 @@
 ![Tests](https://img.shields.io/badge/Tests-75%20passed-brightgreen)
 
 **Live Demo:** https://nl-db-agent-qfsbi8vgngsfa5qpwepcmb.streamlit.app
+
 **Live API:** https://nl-db-agent-140623834959.us-central1.run.app/docs
 
 ---
