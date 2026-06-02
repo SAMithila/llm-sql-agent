@@ -9,58 +9,55 @@ This tool ONLY runs SQL that has already passed validator.py checks.
 Safety features:
     - Row limit cap (never return more than MAX_ROWS)
     - Query timeout (never run longer than TIMEOUT_SECONDS)
-    - Read-only connection (physically cannot write to database)
+    - Dynamic database connection via db_connector
     - Full error capture with structured response
 
 Functions:
     execute_query()   → run validated SQL and return results
 """
 
-import sqlite3
 import os
+import sys
 import time
 import threading
 from typing import Optional
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "../db/dev.db")
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 # ------------------------------------------------------------------
 # Hard limits — these cannot be overridden by the agent or user
 # ------------------------------------------------------------------
 
-MAX_ROWS        = 100     # Never return more than 100 rows
-TIMEOUT_SECONDS = 10      # Kill query if it runs longer than 10 seconds
+MAX_ROWS        = 100
+TIMEOUT_SECONDS = 10
 
 
 # ------------------------------------------------------------------
 # Tool 4: execute_query()
 # ------------------------------------------------------------------
 
-def execute_query(sql: str, row_limit: Optional[int] = None) -> dict:
+def execute_query(
+    sql:        str,
+    row_limit:  Optional[int] = None,
+    session_id: str           = "default",
+) -> dict:
     """
     Executes a validated SQL query against the database.
 
     Args:
         sql:        A SQL query that has already passed validate_sql().
         row_limit:  Optional custom row limit (capped at MAX_ROWS).
+        session_id: Database session to use (from db_connector).
 
     Returns:
-        dict with:
-        {
-            "success":      True,
-            "columns":      ["column1", "column2", ...],
-            "rows":         [[val1, val2], [val1, val2], ...],
-            "row_count":    5,
-            "execution_ms": 42,
-            "truncated":    False,   # True if results were capped
-            "sql":          "SELECT ..."
-        }
+        dict with success, columns, rows, row_count, execution_ms, truncated, sql
     """
+    from db_connector import get_active_engine
+    from sqlalchemy import text as sa_text
 
     # ── Enforce row limit ───────────────────────────────────────
     effective_limit = min(row_limit or MAX_ROWS, MAX_ROWS)
 
-    # Inject LIMIT if not already present
     sql_upper = sql.strip().upper()
     if "LIMIT" not in sql_upper:
         sql = f"{sql.rstrip(';')} LIMIT {effective_limit}"
@@ -76,31 +73,21 @@ def execute_query(sql: str, row_limit: Optional[int] = None) -> dict:
         "error":        None,
     }
 
-    # ── Execute with timeout ────────────────────────────────────
     exception_holder = [None]
     result_holder    = [None]
 
     def run_query():
         try:
-            # Read-only connection — physically cannot modify database
-            conn = sqlite3.connect(
-                f"file:{DB_PATH}?mode=ro",
-                uri=True,
-                check_same_thread=False,
-            )
-            conn.row_factory = sqlite3.Row
+            engine = get_active_engine(session_id)
+            start  = time.time()
 
-            cur   = conn.cursor()
-            start = time.time()
-            cur.execute(sql)
+            with engine.connect() as conn:
+                result_proxy = conn.execute(sa_text(sql))
+                rows         = result_proxy.fetchall()
+                elapsed      = time.time() - start
+                columns      = list(result_proxy.keys())
 
-            rows    = cur.fetchall()
-            elapsed = time.time() - start
-
-            columns = [desc[0] for desc in cur.description] if cur.description else []
             rows_as_lists = [list(row) for row in rows]
-
-            conn.close()
 
             result_holder[0] = {
                 "columns":      columns,
@@ -111,26 +98,22 @@ def execute_query(sql: str, row_limit: Optional[int] = None) -> dict:
         except Exception as e:
             exception_holder[0] = e
 
-    # Run query in a separate thread so we can enforce timeout
+    # ── Run with timeout ────────────────────────────────────────
     thread = threading.Thread(target=run_query)
     thread.start()
     thread.join(timeout=TIMEOUT_SECONDS)
 
-    # ── Timeout check ───────────────────────────────────────────
     if thread.is_alive():
         result["error"] = f"Query timed out after {TIMEOUT_SECONDS} seconds"
         return result
 
-    # ── Exception check ─────────────────────────────────────────
     if exception_holder[0]:
         result["error"] = str(exception_holder[0])
         return result
 
-    # ── Assemble result ─────────────────────────────────────────
     query_result = result_holder[0]
-
-    rows      = query_result["rows"]
-    truncated = len(rows) >= effective_limit
+    rows         = query_result["rows"]
+    truncated    = len(rows) >= effective_limit
 
     result.update({
         "success":      True,
@@ -146,16 +129,7 @@ def execute_query(sql: str, row_limit: Optional[int] = None) -> dict:
 
 
 def format_as_table(execution_result: dict) -> str:
-    """
-    Formats execution results as a readable text table.
-    Useful for quick terminal inspection and observability logs.
-
-    Args:
-        execution_result: The dict returned by execute_query().
-
-    Returns:
-        A formatted string table.
-    """
+    """Formats execution results as a readable text table."""
     if not execution_result["success"]:
         return f"ERROR: {execution_result['error']}"
 
@@ -165,13 +139,11 @@ def format_as_table(execution_result: dict) -> str:
     if not rows:
         return "Query returned 0 rows."
 
-    # Calculate column widths
     col_widths = [len(str(col)) for col in columns]
     for row in rows:
         for i, val in enumerate(row):
             col_widths[i] = max(col_widths[i], len(str(val)))
 
-    # Build table
     separator = "+-" + "-+-".join("-" * w for w in col_widths) + "-+"
     header    = "| " + " | ".join(str(col).ljust(col_widths[i]) for i, col in enumerate(columns)) + " |"
 

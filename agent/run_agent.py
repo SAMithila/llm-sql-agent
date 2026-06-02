@@ -40,7 +40,6 @@ def print_result(state, question: str):
         return
 
     # Error
-    print(f"   DEBUG: error={state.error}, error_stage={state.error_stage}, guardrails={state.guardrails_passed}, execution={state.execution_success}")
     if state.final_response and not state.final_response.get("success"):
         print(f"❌ ERROR: {state.final_response.get('error_message')}")
         print(f"   Stage: {state.final_response.get('stage')}")

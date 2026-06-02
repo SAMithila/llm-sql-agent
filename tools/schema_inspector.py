@@ -6,8 +6,7 @@ Tool 1 of 6 — Schema Inspector
 Gives the agent a complete understanding of the database structure
 BEFORE it attempts to generate any SQL.
 
-The LLM should ALWAYS call get_schema() or search_schema() first.
-Never generate SQL without knowing the schema.
+Now supports PostgreSQL, MySQL, and SQLite via SQLAlchemy inspect().
 
 Functions:
     get_schema()         → full schema of all tables
@@ -15,109 +14,97 @@ Functions:
     get_table_sample()   → show example rows from a table
 """
 
-import sqlite3
 import os
+import sys
 from typing import Optional
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "../db/dev.db")
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 
-def _get_connection() -> sqlite3.Connection:
-    """Get a read-only database connection."""
-    conn = sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True)
-    conn.row_factory = sqlite3.Row
-    return conn
+def _get_engine(session_id: str = "default"):
+    """Get SQLAlchemy engine via dynamic connector."""
+    from db_connector import get_active_engine
+    return get_active_engine(session_id)
 
 
 # ------------------------------------------------------------------
 # Tool 1A: get_schema()
 # ------------------------------------------------------------------
 
-def get_schema(table_name: Optional[str] = None) -> dict:
+def get_schema(
+    table_name: Optional[str] = None,
+    session_id: str           = "default",
+) -> dict:
     """
     Returns the full database schema or a single table's schema.
-
-    Args:
-        table_name: Optional. If provided, returns only that table's schema.
-                    If None, returns all tables.
-
-    Returns:
-        dict with structure:
-        {
-            "tables": {
-                "orders": {
-                    "columns": [
-                        {"name": "order_id", "type": "INTEGER", "nullable": False, "primary_key": True},
-                        ...
-                    ],
-                    "foreign_keys": [
-                        {"column": "customer_id", "references_table": "customers", "references_column": "customer_id"},
-                        ...
-                    ],
-                    "row_count": 200
-                },
-                ...
-            },
-            "views": ["order_revenue", "product_sales_summary"]
-        }
+    Works with PostgreSQL, MySQL, and SQLite.
     """
     try:
-        conn = _get_connection()
-        cur = conn.cursor()
+        from sqlalchemy import inspect as sa_inspect, text
 
-        # Get all tables or just the requested one
+        engine    = _get_engine(session_id)
+        inspector = sa_inspect(engine)
+
+        # Get all table names
+        all_tables = inspector.get_table_names()
         if table_name:
-            cur.execute(
-                "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
-                (table_name,)
-            )
-        else:
-            cur.execute(
-                "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
-            )
+            all_tables = [t for t in all_tables if t == table_name]
 
-        tables = [row["name"] for row in cur.fetchall()]
-
-        # Get views
-        cur.execute("SELECT name FROM sqlite_master WHERE type='view'")
-        views = [row["name"] for row in cur.fetchall()]
+        # Get views (SQLite + PostgreSQL + MySQL)
+        try:
+            views = inspector.get_view_names()
+        except Exception:
+            views = []
 
         schema = {"tables": {}, "views": views}
 
-        for tbl in tables:
-            # Column info
-            cur.execute(f"PRAGMA table_info({tbl})")
-            columns = []
-            for col in cur.fetchall():
-                columns.append({
-                    "name":        col["name"],
-                    "type":        col["type"],
-                    "nullable":    not col["notnull"],
-                    "primary_key": bool(col["pk"]),
-                    "default":     col["dflt_value"],
-                })
+        with engine.connect() as conn:
+            for tbl in all_tables:
+                # Columns
+                columns = []
+                for col in inspector.get_columns(tbl):
+                    columns.append({
+                        "name":        col["name"],
+                        "type":        str(col["type"]),
+                        "nullable":    col.get("nullable", True),
+                        "primary_key": False,
+                        "default":     str(col.get("default", "")),
+                    })
 
-            # Foreign key info
-            cur.execute(f"PRAGMA foreign_key_list({tbl})")
-            foreign_keys = []
-            for fk in cur.fetchall():
-                foreign_keys.append({
-                    "column":             fk["from"],
-                    "references_table":   fk["table"],
-                    "references_column":  fk["to"],
-                })
+                # Primary keys
+                try:
+                    pk_cols = inspector.get_pk_constraint(tbl).get("constrained_columns", [])
+                    for col in columns:
+                        if col["name"] in pk_cols:
+                            col["primary_key"] = True
+                except Exception:
+                    pass
 
-            # Row count
-            cur.execute(f"SELECT COUNT(*) as cnt FROM {tbl}")
-            row_count = cur.fetchone()["cnt"]
+                # Foreign keys
+                foreign_keys = []
+                try:
+                    for fk in inspector.get_foreign_keys(tbl):
+                        for col in fk.get("constrained_columns", []):
+                            foreign_keys.append({
+                                "column":            col,
+                                "references_table":  fk.get("referred_table", ""),
+                                "references_column": fk.get("referred_columns", [""])[0],
+                            })
+                except Exception:
+                    pass
 
-            schema["tables"][tbl] = {
-                "columns":      columns,
-                "foreign_keys": foreign_keys,
-                "row_count":    row_count,
-            }
+                # Row count
+                try:
+                    row_count = conn.execute(text(f"SELECT COUNT(*) FROM {tbl}")).scalar()
+                except Exception:
+                    row_count = 0
 
-        conn.close()
+                schema["tables"][tbl] = {
+                    "columns":      columns,
+                    "foreign_keys": foreign_keys,
+                    "row_count":    row_count,
+                }
+
         return {"success": True, "schema": schema}
 
     except Exception as e:
@@ -128,23 +115,14 @@ def get_schema(table_name: Optional[str] = None) -> dict:
 # Tool 1B: search_schema()
 # ------------------------------------------------------------------
 
-def search_schema(question: str) -> dict:
+def search_schema(question: str, session_id: str = "default") -> dict:
     """
     Finds the most relevant tables for a natural language question.
-    Uses keyword matching against table names, column names, and descriptions.
-
-    Args:
-        question: The user's natural language question.
-
-    Returns:
-        dict with the most relevant tables and their schemas.
-
-    Example:
-        search_schema("What are the top selling products?")
-        → returns schemas for: products, order_items, categories
+    Uses keyword matching against table names and column names.
+    Falls back to dynamic table discovery for unknown schemas.
     """
 
-    # Keyword → table mapping (domain knowledge)
+    # Keyword → table mapping (Northwind defaults)
     TABLE_KEYWORDS = {
         "customers":   ["customer", "client", "buyer", "company", "contact", "who bought"],
         "orders":      ["order", "purchase", "sale", "bought", "transaction", "shipped", "pending"],
@@ -155,35 +133,38 @@ def search_schema(question: str) -> dict:
         "suppliers":   ["supplier", "vendor", "source", "manufacturer"],
     }
 
-    # View keywords
     VIEW_KEYWORDS = {
-        "order_revenue":          ["revenue", "total", "sales amount", "income", "earning"],
-        "product_sales_summary":  ["top product", "best selling", "product revenue", "units sold"],
+        "order_revenue":         ["revenue", "total", "sales amount", "income", "earning"],
+        "product_sales_summary": ["top product", "best selling", "product revenue", "units sold"],
     }
 
-    question_lower = question.lower()
+    question_lower  = question.lower()
     relevant_tables = set()
     relevant_views  = set()
 
-    # Match tables
+    # First: try keyword matching
     for table, keywords in TABLE_KEYWORDS.items():
         if any(kw in question_lower for kw in keywords):
             relevant_tables.add(table)
 
-    # Match views
     for view, keywords in VIEW_KEYWORDS.items():
         if any(kw in question_lower for kw in keywords):
             relevant_views.add(view)
 
-    # Default: if nothing matched, return core tables
+    # If no keyword match: get all tables from the actual database
+    # This handles unknown schemas (user's own database)
     if not relevant_tables:
-        relevant_tables = {"orders", "order_items", "products", "customers"}
+        schema_result = get_schema(session_id=session_id)
+        if schema_result["success"]:
+            all_tables = list(schema_result["schema"]["tables"].keys())
+            # Return first 5 tables as default context
+            relevant_tables = set(all_tables[:5])
 
     # Get schemas for relevant tables
     result = {}
     for table in relevant_tables:
-        table_schema = get_schema(table_name=table)
-        if table_schema["success"]:
+        table_schema = get_schema(table_name=table, session_id=session_id)
+        if table_schema["success"] and table in table_schema["schema"]["tables"]:
             result[table] = table_schema["schema"]["tables"][table]
 
     return {
@@ -199,34 +180,31 @@ def search_schema(question: str) -> dict:
 # Tool 1C: get_table_sample()
 # ------------------------------------------------------------------
 
-def get_table_sample(table_name: str, limit: int = 3) -> dict:
+def get_table_sample(
+    table_name: str,
+    limit:      int = 3,
+    session_id: str = "default",
+) -> dict:
     """
-    Returns sample rows from a table so the agent understands
-    the actual data format (date formats, ID formats, value ranges).
-
-    Args:
-        table_name: Name of the table to sample.
-        limit:      Number of rows to return (max 5, default 3).
-
-    Returns:
-        dict with column names and sample rows.
+    Returns sample rows from a table.
+    Works with PostgreSQL, MySQL, and SQLite.
     """
-    limit = min(limit, 5)  # Hard cap — never return more than 5 sample rows
+    from sqlalchemy import text
+
+    limit = min(limit, 5)
 
     try:
-        conn = _get_connection()
-        cur  = conn.cursor()
+        engine = _get_engine(session_id)
 
-        cur.execute(f"SELECT * FROM {table_name} LIMIT ?", (limit,))
-        rows    = cur.fetchall()
-        columns = [desc[0] for desc in cur.description]
-
-        conn.close()
+        with engine.connect() as conn:
+            result = conn.execute(text(f"SELECT * FROM {table_name} LIMIT {limit}"))
+            rows    = result.fetchall()
+            columns = list(result.keys())
 
         return {
-            "success":    True,
-            "table":      table_name,
-            "columns":    columns,
+            "success":     True,
+            "table":       table_name,
+            "columns":     columns,
             "sample_rows": [dict(zip(columns, row)) for row in rows],
         }
 
@@ -239,7 +217,6 @@ def get_table_sample(table_name: str, limit: int = 3) -> dict:
 # ------------------------------------------------------------------
 
 if __name__ == "__main__":
-    import json
 
     print("=" * 60)
     print("TEST 1: get_schema() — all tables")
