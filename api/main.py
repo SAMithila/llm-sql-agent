@@ -36,6 +36,7 @@ from agent.graph              import run_query
 from observability.tracer     import save_trace, list_traces, get_metrics_summary
 from tools.schema_inspector   import get_schema
 from evaluation.metrics       import load_results
+from db_connector             import connect, get_connection_info, disconnect, test_connection
 
 
 # ------------------------------------------------------------------
@@ -65,6 +66,8 @@ app.add_middleware(
 class QueryRequest(BaseModel):
     question: str
     user_id:  str = "default_user"
+    session_id: str = "default"
+
 
 class QueryResponse(BaseModel):
     success:              bool
@@ -114,7 +117,7 @@ def query(request: QueryRequest):
     start = time.time()
 
     try:
-        state = run_query(request.question, request.user_id)
+        state = run_query(request.question, request.user_id, request.session_id)
 
         # Save trace
         save_trace(state)
@@ -183,6 +186,44 @@ def traces(limit: int = 10):
     """Returns recent agent traces."""
     return {"traces": list_traces(limit=limit)}
 
+class ConnectRequest(BaseModel):
+    connection_string: str
+    session_id: str = "default"
+
+
+@app.post("/connect")
+def connect_database(request: ConnectRequest):
+    """
+    Connect to a user's database.
+    
+    Request body:
+        {
+            "connection_string": "postgresql://user:pass@host:5432/dbname",
+            "session_id": "user123"
+        }
+    """
+    if not request.connection_string.strip():
+        raise HTTPException(status_code=400, detail="Connection string cannot be empty")
+    
+    result = connect(request.connection_string, request.session_id)
+    
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail=result.get("error", "Connection failed"))
+    
+    return result
+
+
+@app.get("/connection/{session_id}")
+def connection_status(session_id: str = "default"):
+    """Returns the current connection status for a session."""
+    return get_connection_info(session_id)
+
+
+@app.post("/disconnect/{session_id}")
+def disconnect_database(session_id: str = "default"):
+    """Disconnects a session from its database."""
+    disconnect(session_id)
+    return {"success": True, "message": "Disconnected"}
 
 # ------------------------------------------------------------------
 # Run locally

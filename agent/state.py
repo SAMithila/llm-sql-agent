@@ -24,6 +24,8 @@ class AgentState:
     # ── Input ───────────────────────────────────────────────────
     question:    str  = ""          # Original user question
     user_id:     str  = "default_user"
+    session_id:  str  = "default"
+
 
     # ── Clarification ───────────────────────────────────────────
     needs_clarification: bool       = False

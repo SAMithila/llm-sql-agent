@@ -370,7 +370,7 @@ def build_graph() -> StateGraph:
 # Convenience: run a single question
 # ------------------------------------------------------------------
 
-def run_query(question: str, user_id: str = "default_user") -> AgentState:
+def run_query(question: str, user_id: str = "default_user", session_id: str = "default") -> AgentState:
     """
     Run a natural language question through the full agent pipeline.
 
@@ -382,7 +382,7 @@ def run_query(question: str, user_id: str = "default_user") -> AgentState:
         Final AgentState with all results and trace.
     """
     graph        = build_graph()
-    initial_state = AgentState(question=question, user_id=user_id)
+    initial_state = AgentState(question=question, user_id=user_id, session_id=session_id)
     final_state  = graph.invoke(initial_state)
 
     # LangGraph returns a dict — convert back to AgentState
