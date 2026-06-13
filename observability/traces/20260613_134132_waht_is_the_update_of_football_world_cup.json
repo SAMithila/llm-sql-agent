@@ -1,0 +1,89 @@
+{
+  "metadata": {
+    "timestamp": "2026-06-13T13:41:32.804008",
+    "question": "waht is the update of football world cup",
+    "user_id": "default_user",
+    "success": false,
+    "had_error": true,
+    "retry_count": 0
+  },
+  "pipeline": {
+    "clarification_needed": false,
+    "schema_tables": [
+      "employees",
+      "order_items",
+      "orders",
+      "categories",
+      "customers"
+    ],
+    "generated_sql": null,
+    "sql_confidence": "",
+    "sql_explanation": "",
+    "sql_assumptions": "",
+    "validation_passed": false,
+    "guardrails_passed": false,
+    "execution_success": false
+  },
+  "validation": null,
+  "guardrails": {
+    "permissions": null,
+    "limits": null,
+    "safety": null
+  },
+  "execution": {
+    "row_count": 0,
+    "execution_ms": 0,
+    "truncated": false,
+    "columns": []
+  },
+  "response": {
+    "summary": "",
+    "key_insights": []
+  },
+  "error": {
+    "message": "SQL generation failed: Failed to parse LLM response: Generated SQL is not a SELECT statement: ",
+    "stage": "generation"
+  },
+  "trace": [
+    {
+      "node": "clarify",
+      "message": "Checking question: 'waht is the update of football world cup'",
+      "timestamp": 1781336488.218
+    },
+    {
+      "node": "clarify",
+      "message": "Question is clear \u2014 proceeding",
+      "timestamp": 1781336488.218
+    },
+    {
+      "node": "schema",
+      "message": "Retrieving relevant schema",
+      "timestamp": 1781336488.228
+    },
+    {
+      "node": "schema",
+      "message": "Found relevant tables: ['employees', 'order_items', 'orders', 'categories', 'customers']",
+      "timestamp": 1781336488.29
+    },
+    {
+      "node": "generate",
+      "message": "Generating SQL (attempt 1)",
+      "timestamp": 1781336488.29
+    },
+    {
+      "node": "generate",
+      "message": "ERROR: SQL generation failed: Failed to parse LLM response: Generated SQL is not a SELECT statement: ",
+      "timestamp": 1781336492.801
+    },
+    {
+      "node": "format",
+      "message": "Formatting response",
+      "timestamp": 1781336492.803
+    },
+    {
+      "node": "format",
+      "message": "Error response formatted for stage: generation",
+      "timestamp": 1781336492.803
+    }
+  ]
+}
