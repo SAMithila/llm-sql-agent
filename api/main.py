@@ -77,6 +77,8 @@ class QueryResponse(BaseModel):
     sql:                  Optional[str]    = None
     row_count:            Optional[int]    = None
     execution_ms:         Optional[int]    = None
+    columns:              Optional[list]   = None      # ADD THIS
+    rows:                 Optional[list]   = None 
     needs_clarification:  bool             = False
     clarification:        Optional[dict]   = None
     error:                Optional[str]    = None
@@ -155,6 +157,8 @@ def query(request: QueryRequest):
             sql          = state.generated_sql,
             row_count    = exec_res.get("row_count", 0),
             execution_ms = exec_res.get("execution_ms", 0),
+            columns      = exec_res.get("columns", []),
+            rows         = exec_res.get("rows", []),
             trace_summary = [
                 {"node": t["node"], "message": t["message"]}
                 for t in state.trace
