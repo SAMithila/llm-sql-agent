@@ -223,11 +223,55 @@ def connection_status(session_id: str = "default"):
     return get_connection_info(session_id)
 
 
-@app.post("/disconnect/{session_id}")
-def disconnect_database(session_id: str = "default"):
-    """Disconnects a session from its database."""
-    disconnect(session_id)
-    return {"success": True, "message": "Disconnected"}
+@app.post("/connect/sqlite-upload")
+async def connect_sqlite_upload(
+    file: UploadFile = File(...),
+    session_id: str = Form(default="default")
+):
+    """Upload a SQLite .db file and connect to it."""
+    if not (file.filename.endswith(".db") or file.filename.endswith(".sqlite")):
+        raise HTTPException(status_code=400, detail="File must be .db or .sqlite")
+
+    tmp_dir = tempfile.mkdtemp()
+    tmp_path = os.path.join(tmp_dir, "uploaded.db")
+
+    try:
+        with open(tmp_path, "wb") as f:
+            shutil.copyfileobj(file.file, f)
+
+        conn = sqlite3.connect(tmp_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
+        tables = [row[0] for row in cursor.fetchall()]
+
+        table_details = {}
+        for table in tables:
+            cursor.execute(f"PRAGMA table_info(`{table}`)")
+            columns = [{"name": row[1], "type": row[2]} for row in cursor.fetchall()]
+            cursor.execute(f"SELECT COUNT(*) FROM `{table}`")
+            row_count = cursor.fetchone()[0]
+            table_details[table] = {"columns": columns, "row_count": row_count}
+
+        conn.close()
+
+        result = connect(f"sqlite:///{tmp_path}", session_id)
+        if not result["success"]:
+            raise HTTPException(status_code=400, detail=result.get("error"))
+
+        return {
+            "success":     True,
+            "db_type":     "sqlite",
+            "filename":    file.filename,
+            "session_id":  session_id,
+            "table_count": len(tables),
+            "tables":      table_details,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to process file: {str(e)}")
+
 
 # ------------------------------------------------------------------
 # Run locally
