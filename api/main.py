@@ -246,7 +246,8 @@ async def connect_sqlite_upload(
 
         conn = sqlite3.connect(tmp_path)
         cursor = conn.cursor()
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name")        tables = [row[0] for row in cursor.fetchall()]
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name")        
+        tables = [row[0] for row in cursor.fetchall()]
 
         table_details = {}
         for table in tables:
