@@ -25,7 +25,8 @@ from pathlib import Path
 from dotenv import load_dotenv
 load_dotenv(Path(__file__).parent.parent / ".env")
 
-from fastapi import FastAPI, HTTPException, Header
+from fastapi import FastAPI, HTTPException, Header, UploadFile, File, Form
+import tempfile, shutil, sqlite3
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
@@ -49,13 +50,17 @@ app = FastAPI(
     version     = "1.0.0",
 )
 
-# CORS — allow Streamlit frontend to connect
+# CORS — allow frontend to connect
 app.add_middleware(
     CORSMiddleware,
-    allow_origins     = ["*"],   # Restrict in production
-    allow_credentials = True,
-    allow_methods     = ["*"],
-    allow_headers     = ["*"],
+    allow_origins=[
+        "https://llm-sql-agent-ui.vercel.app",
+        "http://localhost:3000",
+        "*",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
@@ -241,8 +246,7 @@ async def connect_sqlite_upload(
 
         conn = sqlite3.connect(tmp_path)
         cursor = conn.cursor()
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
-        tables = [row[0] for row in cursor.fetchall()]
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name")        tables = [row[0] for row in cursor.fetchall()]
 
         table_details = {}
         for table in tables:
