@@ -8,3 +8,5 @@ __pycache__/
 .DS_Store
 venv/
 *.egg-info/
+db/ecommerce.db
+db/ecommerce_data/
