@@ -227,6 +227,11 @@ def connection_status(session_id: str = "default"):
     """Returns the current connection status for a session."""
     return get_connection_info(session_id)
 
+@app.post("/disconnect/{session_id}")
+def disconnect_database(session_id: str = "default"):
+    """Disconnects a session from its database."""
+    disconnect(session_id)
+    return {"success": True, "message": "Disconnected"}
 
 @app.post("/connect/sqlite-upload")
 async def connect_sqlite_upload(
