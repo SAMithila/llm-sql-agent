@@ -21,25 +21,24 @@ import os
 import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from pathlib                  import Path
-from dotenv                   import load_dotenv
+from pathlib import Path
+from dotenv import load_dotenv
 load_dotenv(Path(__file__).parent.parent / ".env")
 
-from fastapi                  import FastAPI, HTTPException, Header, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException, Header, UploadFile, File, Form
 import tempfile, shutil, sqlite3
-from fastapi.middleware.cors  import CORSMiddleware
-from pydantic                 import BaseModel
-from typing                   import Optional
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import Optional
 import time
-from datetime                 import datetime
+from datetime import datetime
 
 from agent.graph              import run_query
 from observability.tracer     import save_trace, list_traces, get_metrics_summary
 from tools.schema_inspector   import get_schema
 from evaluation.metrics       import load_results
 from db_connector             import connect, get_connection_info, disconnect, test_connection
-from google.cloud             import storage as gcs
-import uuid
+
 
 # ------------------------------------------------------------------
 # App setup
@@ -283,44 +282,6 @@ async def connect_sqlite_upload(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to process file: {str(e)}")
 
-@app.post("/upload/get-signed-url")
-def get_signed_url(session_id: str = "default"):
-    """Returns a signed URL for direct browser-to-GCS upload."""
-    client = gcs.Client()
-    bucket = client.bucket("nl-db-agent-uploads")  # create this bucket
-    blob_name = f"uploads/{session_id}/{uuid.uuid4()}.db"
-    blob = bucket.blob(blob_name)
-    
-    url = blob.generate_signed_url(
-        version="v4",
-        expiration=900,  # 15 minutes
-        method="PUT",
-        content_type="application/octet-stream",
-    )
-    return {"upload_url": url, "blob_path": blob_name}
-
-@app.post("/upload/connect-from-gcs")
-def connect_from_gcs(blob_path: str, session_id: str = "default"):
-    """Downloads file from GCS to temp and connects."""
-    client = gcs.Client()
-    bucket = client.bucket("nl-db-agent-uploads")
-    blob = bucket.blob(blob_path)
-    
-    tmp_path = f"/tmp/{session_id}.db"
-    blob.download_to_filename(tmp_path)
-    
-    result = connect(f"sqlite:///{tmp_path}", session_id)
-    if not result["success"]:
-        raise HTTPException(status_code=400, detail=result.get("error"))
-    
-    # Read schema
-    conn = sqlite3.connect(tmp_path)
-    cursor = conn.cursor()
-    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
-    tables = [row[0] for row in cursor.fetchall()]
-    conn.close()
-    
-    return {"success": True, "db_type": "sqlite", "table_count": len(tables)}
 
 # ------------------------------------------------------------------
 # Run locally

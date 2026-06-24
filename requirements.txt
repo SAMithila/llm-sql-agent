@@ -10,4 +10,3 @@ requests>=2.31.0
 pandas>=2.0.0
 sqlalchemy>=2.0.0
 psycopg2-binary>=2.9.0
-pymysql>=1.0.0google-cloud-storage
