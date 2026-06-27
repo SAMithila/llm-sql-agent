@@ -130,12 +130,11 @@ def route_question(question: str) -> dict:
             route_str = "SQL"  # safe default
 
         return {
-            "success":      True,      # ADD THIS
-            "summary":      answer,
-            "key_insights": insights,
-            "route":        "RAG",
-            "sources":      state.rag_sources,
-}
+            "route":     Route(route_str),
+            "reason":    result.get("reason", ""),
+            "sql_focus": result.get("sql_focus"),
+            "rag_focus": result.get("rag_focus"),
+        }
 
     except json.JSONDecodeError as e:
         print(f"[Router] JSON parse error: {e}")
