@@ -141,19 +141,23 @@ def query(request: QueryRequest):
                 timestamp           = datetime.now().isoformat(),
             )
 
-        # Error
-        if not state.execution_success:
+        # Check success — RAG route doesn't use execution_success
+        final    = state.final_response or {}
+        exec_res = state.execution_result or {}
+        
+        # Determine success: SQL needs execution_success, RAG uses final_response success
+        is_success = final.get("success", False)
+
+        # Error case
+        if not is_success:
             return QueryResponse(
                 success   = False,
                 question  = request.question,
-                error     = state.final_response.get("error_message") if state.final_response else state.error,
+                error     = final.get("error_message") or state.error,
                 timestamp = datetime.now().isoformat(),
             )
 
-        # Success
-        final    = state.final_response or {}
-        exec_res = state.execution_result or {}
-
+        # Success — works for SQL, RAG, and BOTH routes
         return QueryResponse(
             success      = True,
             question     = request.question,
@@ -170,6 +174,8 @@ def query(request: QueryRequest):
             ],
             timestamp    = datetime.now().isoformat(),
         )
+
+        
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
