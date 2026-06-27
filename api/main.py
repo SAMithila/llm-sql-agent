@@ -168,13 +168,14 @@ def query(request: QueryRequest):
             execution_ms = exec_res.get("execution_ms", 0),
             columns      = exec_res.get("columns", []),
             rows         = exec_res.get("rows", []),
+            route        = final.get("route") or state.route,   # ADD
+            sources      = final.get("sources", []),             # ADD
             trace_summary = [
                 {"node": t["node"], "message": t["message"]}
                 for t in state.trace
             ],
             timestamp    = datetime.now().isoformat(),
         )
-
         
 
     except Exception as e:
