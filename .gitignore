@@ -10,3 +10,4 @@ venv/
 *.egg-info/
 db/ecommerce.db
 db/ecommerce_data/
+documents/
