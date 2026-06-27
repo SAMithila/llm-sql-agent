@@ -124,19 +124,20 @@ def search_schema(question: str, session_id: str = "default") -> dict:
 
     # Keyword → table mapping (Northwind defaults)
     TABLE_KEYWORDS = {
-        "customers":   ["customer", "client", "buyer", "company", "contact", "who bought"],
-        "orders":      ["order", "purchase", "sale", "bought", "transaction", "shipped", "pending"],
-        "order_items": ["item", "line item", "product in order", "quantity", "discount", "revenue", "category"],
-        "products":    ["product", "item", "goods", "stock", "inventory", "price", "sell"],
-        "employees":   ["employee", "staff", "rep", "salesperson", "who processed", "manager"],
-        "categories":  ["category", "type", "group", "kind", "segment"],
-        "suppliers":   ["supplier", "vendor", "source", "manufacturer"],
+        "Artist":        ["artist", "band", "musician", "performer", "who made", "singer"],
+        "Album":         ["album", "record", "release", "collection", "disc"],
+        "Track":         ["track", "song", "music", "audio", "duration", "media", "price"],
+        "Genre":         ["genre", "type", "style", "category", "kind", "rock", "jazz", "latin", "metal", "blues"],
+        "Invoice":       ["invoice", "order", "purchase", "sale", "bought", "transaction", "revenue", "total", "billing"],
+        "InvoiceLine":   ["line item", "quantity", "unit price", "item", "revenue", "earning", "income"],
+        "Customer":      ["customer", "client", "buyer", "who bought", "contact", "email", "country", "city"],
+        "Employee":      ["employee", "staff", "rep", "manager", "reports to", "hire", "title"],
+        "Playlist":      ["playlist", "collection", "list", "queue"],
+        "PlaylistTrack": ["playlist track", "track in playlist", "song in list"],
+        "MediaType":     ["media", "format", "mp3", "aac", "wav", "file type"],
     }
 
-    VIEW_KEYWORDS = {
-        "order_revenue":         ["revenue", "total", "sales amount", "income", "earning"],
-        "product_sales_summary": ["top product", "best selling", "product revenue", "units sold"],
-    }
+    VIEW_KEYWORDS = {}
 
     question_lower  = question.lower()
     relevant_tables = set()
@@ -241,9 +242,9 @@ if __name__ == "__main__":
         print(f"  ERROR: {result['error']}")
 
     print("\n" + "=" * 60)
-    print("TEST 3: get_table_sample() — customers")
+    print("TEST 3: get_table_sample() — Customer")
     print("=" * 60)
-    result = get_table_sample("customers", limit=3)
+    result = get_table_sample("Customer", limit=3)
     if result["success"]:
         print(f"  Columns: {result['columns']}")
         for row in result["sample_rows"]:

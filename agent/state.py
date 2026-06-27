@@ -8,6 +8,8 @@ in the LangGraph agent graph.
 
 Every node reads from state and writes back to state.
 This is the single source of truth for the entire agent run.
+
+Phase 7 update: Added RAG fields for Agentic RAG support.
 """
 
 from typing import Optional, Any
@@ -22,20 +24,25 @@ class AgentState:
     """
 
     # ── Input ───────────────────────────────────────────────────
-    question:    str  = ""          # Original user question
+    question:    str  = ""
     user_id:     str  = "default_user"
     session_id:  str  = "default"
 
+    # ── Phase 7: Routing ────────────────────────────────────────
+    route:       str  = "SQL"       # "SQL" | "RAG" | "BOTH"
+    route_reason: str = ""          # LLM's reasoning for the route
+    sql_focus:   Optional[str] = None   # what SQL should find
+    rag_focus:   Optional[str] = None   # what RAG should find
 
     # ── Clarification ───────────────────────────────────────────
     needs_clarification: bool       = False
     clarification_response: Optional[dict] = None
 
     # ── Schema ──────────────────────────────────────────────────
-    schema_context: Optional[dict]  = None   # From schema_inspector
+    schema_context: Optional[dict]  = None
 
     # ── SQL Generation ──────────────────────────────────────────
-    generated_sql:  Optional[str]   = None   # From sql_generator
+    generated_sql:   Optional[str]  = None
     sql_explanation: str            = ""
     sql_assumptions: str            = ""
     sql_confidence:  str            = ""
@@ -52,18 +59,24 @@ class AgentState:
     guardrails_passed: bool           = False
 
     # ── Execution ───────────────────────────────────────────────
-    execution_result: Optional[dict] = None
-    execution_success: bool          = False
+    execution_result:  Optional[dict] = None
+    execution_success: bool           = False
+
+    # ── Phase 7: RAG ────────────────────────────────────────────
+    rag_context:   Optional[str]  = None   # formatted context string
+    rag_chunks:    list           = field(default_factory=list)   # raw chunks
+    rag_sources:   list           = field(default_factory=list)   # source docs cited
+    rag_success:   bool           = False
 
     # ── Response ────────────────────────────────────────────────
-    final_response: Optional[dict]  = None
+    final_response: Optional[dict] = None
 
     # ── Pipeline metadata ───────────────────────────────────────
-    error:        Optional[str]     = None
-    error_stage:  Optional[str]     = None
-    retry_count:  int               = 0
-    max_retries:  int               = 3
-    trace:        list              = field(default_factory=list)
+    error:        Optional[str]    = None
+    error_stage:  Optional[str]    = None
+    retry_count:  int              = 0
+    max_retries:  int              = 3
+    trace:        list             = field(default_factory=list)
 
     def add_trace(self, node: str, message: str) -> None:
         """Add a trace entry for observability."""
@@ -79,3 +92,9 @@ class AgentState:
 
     def can_retry(self) -> bool:
         return self.retry_count < self.max_retries
+
+    def needs_sql(self) -> bool:
+        return self.route in ("SQL", "BOTH")
+
+    def needs_rag(self) -> bool:
+        return self.route in ("RAG", "BOTH")

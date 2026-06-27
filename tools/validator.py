@@ -17,7 +17,7 @@ import sqlite3
 import os
 import re
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "../db/dev.db")
+DB_PATH = os.path.join(os.path.dirname(__file__), "../db/chinook.db")
 
 # ------------------------------------------------------------------
 # Dangerous patterns — block these regardless of anything else

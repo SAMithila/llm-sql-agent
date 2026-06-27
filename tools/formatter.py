@@ -6,7 +6,9 @@ Tool 6 — Response Formatter
 Takes raw query results and converts them into clear,
 plain English responses that non-technical users can understand.
 
-This is the last step in the pipeline — the agent's "voice."
+Phase 7 update: Added rag_context and rag_sources parameters
+to format_response() for the BOTH route — SQL results get
+enriched with document context before the final answer.
 
 Functions:
     format_response()    → convert raw results to plain English
@@ -18,6 +20,7 @@ import os
 import json
 import re
 from pathlib import Path
+from typing import Optional
 from openai import OpenAI
 from dotenv import load_dotenv
 
@@ -37,12 +40,16 @@ def format_response(
     columns:          list,
     rows:             list,
     execution_ms:     int,
-    truncated:        bool  = False,
-    explanation:      str   = "",
-    assumptions:      str   = "",
+    truncated:        bool            = False,
+    explanation:      str             = "",
+    assumptions:      str             = "",
+    rag_context:      Optional[str]   = None,   # Phase 7: document context
+    rag_sources:      Optional[list]  = None,   # Phase 7: source citations
 ) -> dict:
     """
     Converts raw query results into a plain English response.
+    When rag_context is provided (BOTH route), enriches the answer
+    with industry document context alongside the SQL data.
 
     Args:
         question:     The original user question.
@@ -53,15 +60,18 @@ def format_response(
         truncated:    Whether results were capped at row limit.
         explanation:  SQL explanation from sql_generator.
         assumptions:  Assumptions made during SQL generation.
+        rag_context:  Document context from Pinecone (BOTH route only).
+        rag_sources:  List of source documents cited (BOTH route only).
 
     Returns:
         dict with:
         {
             "success":       True,
-            "summary":       "Plain English answer to the question",
+            "summary":       "Plain English answer",
             "key_insights":  ["Insight 1", "Insight 2"],
             "data_table":    {"columns": [...], "rows": [...]},
-            "metadata":      {"execution_ms": 42, "row_count": 5, ...}
+            "sources":       [...],   # only for BOTH route
+            "metadata":      {"execution_ms": 42, "row_count": 5}
         }
     """
 
@@ -69,11 +79,83 @@ def format_response(
     if not rows:
         return format_no_results(question)
 
-    # Build data preview for LLM (max 10 rows to keep prompt lean)
+    # Build data preview for LLM (max 10 rows)
     preview_rows = rows[:10]
     data_preview = _build_data_preview(columns, preview_rows)
 
-    prompt = f"""A user asked this business question:
+    # Choose prompt based on whether RAG context is available
+    if rag_context:
+        prompt = _build_both_prompt(
+            question, data_preview, rows, truncated,
+            assumptions, rag_context
+        )
+    else:
+        prompt = _build_sql_only_prompt(
+            question, data_preview, rows, truncated, assumptions
+        )
+
+    try:
+        response = client.chat.completions.create(
+            model=MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.3,
+            max_tokens=600,
+        )
+
+        raw     = response.choices[0].message.content.strip()
+        cleaned = re.sub(r"```(?:json)?", "", raw).strip().strip("`").strip()
+        data    = json.loads(cleaned)
+
+        result = {
+            "success":      True,
+            "summary":      data.get("summary", ""),
+            "key_insights": data.get("key_insights", []),
+            "data_table":   {"columns": columns, "rows": rows},
+            "metadata": {
+                "execution_ms": execution_ms,
+                "row_count":    len(rows),
+                "truncated":    truncated,
+                "sql":          sql,
+                "route":        "BOTH" if rag_context else "SQL",
+            },
+        }
+
+        # Add sources for BOTH route
+        if rag_sources:
+            result["sources"] = rag_sources
+
+        return result
+
+    except Exception as e:
+        return {
+            "success":      True,
+            "summary":      f"Query returned {len(rows)} result(s).",
+            "key_insights": [],
+            "data_table":   {"columns": columns, "rows": rows},
+            "metadata": {
+                "execution_ms": execution_ms,
+                "row_count":    len(rows),
+                "truncated":    truncated,
+                "sql":          sql,
+                "warning":      f"Summary generation failed: {str(e)}",
+                "route":        "BOTH" if rag_context else "SQL",
+            },
+        }
+
+
+# ------------------------------------------------------------------
+# Prompt builders
+# ------------------------------------------------------------------
+
+def _build_sql_only_prompt(
+    question: str,
+    data_preview: str,
+    rows: list,
+    truncated: bool,
+    assumptions: str,
+) -> str:
+    """Standard SQL-only prompt (unchanged from Phase 1-6)."""
+    return f"""A user asked this business question:
 "{question}"
 
 The database returned these results:
@@ -98,49 +180,54 @@ Respond ONLY with valid JSON in this exact format:
     ]
 }}
 
-Nothing else. No markdown. Just the JSON.
-"""
+Nothing else. No markdown. Just the JSON."""
 
-    try:
-        response = client.chat.completions.create(
-            model=MODEL,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.3,
-            max_tokens=400,
-        )
 
-        raw     = response.choices[0].message.content.strip()
-        cleaned = re.sub(r"```(?:json)?", "", raw).strip().strip("`").strip()
-        data    = json.loads(cleaned)
+def _build_both_prompt(
+    question: str,
+    data_preview: str,
+    rows: list,
+    truncated: bool,
+    assumptions: str,
+    rag_context: str,
+) -> str:
+    """
+    BOTH route prompt — combines SQL data with document context.
+    The LLM synthesizes a richer answer that references both sources.
+    """
+    return f"""A user asked this business question:
+"{question}"
 
-        return {
-            "success":      True,
-            "summary":      data.get("summary", ""),
-            "key_insights": data.get("key_insights", []),
-            "data_table":   {"columns": columns, "rows": rows},
-            "metadata": {
-                "execution_ms": execution_ms,
-                "row_count":    len(rows),
-                "truncated":    truncated,
-                "sql":          sql,
-            },
-        }
+You have TWO sources of information to answer this:
 
-    except Exception as e:
-        # Fallback: return structured data without LLM summary
-        return {
-            "success":      True,
-            "summary":      f"Query returned {len(rows)} result(s).",
-            "key_insights": [],
-            "data_table":   {"columns": columns, "rows": rows},
-            "metadata": {
-                "execution_ms": execution_ms,
-                "row_count":    len(rows),
-                "truncated":    truncated,
-                "sql":          sql,
-                "warning":      f"Summary generation failed: {str(e)}",
-            },
-        }
+=== SOURCE 1: DATABASE RESULTS (Chinook Music Store) ===
+{data_preview}
+
+Total rows: {len(rows)}
+{"Note: Results were truncated at 100 rows." if truncated else ""}
+{"SQL assumption: " + assumptions if assumptions else ""}
+
+=== SOURCE 2: INDUSTRY DOCUMENTS ===
+{rag_context[:2000]}
+
+Write a rich business response that:
+1. Directly answers their question using BOTH the database data AND the industry context
+2. Compares internal numbers to industry benchmarks where relevant
+3. Highlights 3-4 key insights that combine both data sources
+4. Clearly distinguishes what comes from "our data" vs "industry reports"
+5. Sounds like a senior music industry analyst
+
+Respond ONLY with valid JSON in this exact format:
+{{
+    "summary": "Answer combining internal data and industry context (2-3 sentences)",
+    "key_insights": [
+        "Insight from our database data with specific numbers",
+        "Insight from industry reports with specific numbers",
+        "Comparative insight combining both sources"
+    ]
+}}
+
+Nothing else. No markdown. Just the JSON."""
 
 
 # ------------------------------------------------------------------
@@ -148,25 +235,15 @@ Nothing else. No markdown. Just the JSON.
 # ------------------------------------------------------------------
 
 def format_error(question: str, error: str, stage: str) -> dict:
-    """
-    Converts a pipeline error into a friendly user message.
+    """Converts a pipeline error into a friendly user message."""
 
-    Args:
-        question: The original user question.
-        error:    The technical error message.
-        stage:    Where in the pipeline the error occurred.
-
-    Returns:
-        dict with a user-friendly error message.
-    """
-
-    # Map technical errors to friendly messages
     friendly_messages = {
         "validation":  "I couldn't safely generate a query for that question. Could you rephrase it?",
         "execution":   "The query ran into an issue. This might be a complex question — try breaking it into smaller parts.",
-        "timeout":     "That query took too long to run. Try adding more specific filters (like a date range or specific category).",
+        "timeout":     "That query took too long to run. Try adding more specific filters.",
         "permission":  "You don't have access to that data. Please contact your administrator.",
         "generation":  "I had trouble understanding that question. Could you be more specific?",
+        "rag":         "I couldn't find relevant information in the documents for that question.",
     }
 
     message = friendly_messages.get(
@@ -178,7 +255,7 @@ def format_error(question: str, error: str, stage: str) -> dict:
         "success":       False,
         "error_message": message,
         "stage":         stage,
-        "technical":     error,   # Logged internally, not shown to user
+        "technical":     error,
     }
 
 
@@ -187,16 +264,7 @@ def format_error(question: str, error: str, stage: str) -> dict:
 # ------------------------------------------------------------------
 
 def format_no_results(question: str) -> dict:
-    """
-    Handles the case where a valid query returns zero rows.
-    This is not an error — it's a real answer.
-
-    Args:
-        question: The original user question.
-
-    Returns:
-        dict with a friendly no-results message.
-    """
+    """Handles the case where a valid query returns zero rows."""
     return {
         "success":      True,
         "summary":      "No results found for your question. The data may not exist for the criteria specified.",
@@ -237,48 +305,43 @@ if __name__ == "__main__":
     print("FORMATTER TESTS")
     print("=" * 60)
 
-    # Test 1: Format real query results
-    print("\n── TEST 1: Top products by revenue ──")
+    # Test 1: SQL-only
+    print("\n── TEST 1: SQL only ──")
     result = format_response(
-        question     = "What are the top 5 products by revenue?",
-        sql          = "SELECT product_name, total_revenue FROM product_sales_summary ORDER BY total_revenue DESC LIMIT 5",
-        columns      = ["product_name", "total_revenue"],
+        question     = "What is the total revenue by genre?",
+        sql          = "SELECT g.Name, SUM(il.UnitPrice * il.Quantity) FROM Genre g JOIN Track t...",
+        columns      = ["Genre", "Revenue"],
         rows         = [
-            ["Sir Rodney's Marmalade", 35170.2],
-            ["Mishi Kobe Niku",        33028.5],
-            ["Carnarvon Tigers",       23050.0],
-            ["Northwoods Cranberry",   15842.0],
-            ["Queso Manchego",         14489.4],
+            ["Rock",   826.65],
+            ["Latin",  382.14],
+            ["Metal",  261.36],
         ],
-        execution_ms = 2,
-        truncated    = False,
+        execution_ms = 3,
     )
+    print(f"✅ Summary: {result['summary']}")
+    for ins in result["key_insights"]:
+        print(f"   • {ins}")
 
-    if result["success"]:
-        print(f"✅ Summary      : {result['summary']}")
-        for insight in result["key_insights"]:
-            print(f"   Insight      : {insight}")
-        print(f"   Row count    : {result['metadata']['row_count']}")
-        print(f"   Execution ms : {result['metadata']['execution_ms']}")
-    else:
-        print(f"❌ {result}")
-
-    # Test 2: Format error
-    print("\n── TEST 2: Error formatting ──")
-    error_result = format_error(
-        question = "Delete all orders",
-        error    = "Safety check failed: Query must start with SELECT",
-        stage    = "validation",
+    # Test 2: BOTH route with RAG context
+    print("\n── TEST 2: BOTH route (SQL + RAG) ──")
+    result2 = format_response(
+        question     = "How does our Rock revenue compare to global industry trends?",
+        sql          = "SELECT g.Name, SUM(il.UnitPrice * il.Quantity) FROM Genre g...",
+        columns      = ["Genre", "Revenue"],
+        rows         = [["Rock", 826.65]],
+        execution_ms = 4,
+        rag_context  = "[Source 1: IFPI GMR 2026]\nRock remained the dominant genre globally, accounting for 28% of all streaming revenue in 2025. Latin music was the fastest-growing genre with 17% YoY growth.",
+        rag_sources  = [{"title": "IFPI Global Music Report 2026", "publisher": "IFPI", "year": 2026}],
     )
-    print(f"✅ Error message : {error_result['error_message']}")
-    print(f"   Stage        : {error_result['stage']}")
+    print(f"✅ Summary: {result2['summary']}")
+    for ins in result2["key_insights"]:
+        print(f"   • {ins}")
+    print(f"   Sources: {result2.get('sources', [])}")
 
-    # Test 3: No results
-    print("\n── TEST 3: No results ──")
-    no_result = format_no_results("Show orders from 1990")
-    print(f"✅ Summary       : {no_result['summary']}")
-    for insight in no_result["key_insights"]:
-        print(f"   Insight      : {insight}")
+    # Test 3: Error
+    print("\n── TEST 3: Error ──")
+    err = format_error("Delete all orders", "Safety check failed", "validation")
+    print(f"✅ Error: {err['error_message']}")
 
     print("\n" + "=" * 60)
     print("✅ All formatter tests complete")

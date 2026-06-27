@@ -20,17 +20,22 @@ Functions:
 """
 
 import os
+import tempfile
+import sqlite3
+import shutil
 from typing import Optional
 from sqlalchemy import create_engine, text, inspect
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import OperationalError, ArgumentError
+from fastapi import UploadFile, File, Form
+
 
 
 # ------------------------------------------------------------------
 # Default connection (Northwind SQLite — for demo)
 # ------------------------------------------------------------------
 
-DEFAULT_DB = f"sqlite:///{os.path.join(os.path.dirname(__file__), 'db/dev.db')}"
+DEFAULT_DB = f"sqlite:///{os.path.join(os.path.dirname(__file__), 'db/chinook.db')}"
 
 
 # ------------------------------------------------------------------
