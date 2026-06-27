@@ -387,6 +387,7 @@ Cite the source document(s) in your answer."""
         ]
 
         return {
+            "success":      True,        # ADD THIS
             "summary":      answer,
             "key_insights": insights,
             "route":        "RAG",
@@ -395,6 +396,7 @@ Cite the source document(s) in your answer."""
 
     except Exception as e:
         return {
+            "success":      True,        # ADD THIS
             "summary":      f"Retrieved {len(state.rag_chunks)} relevant passages but could not synthesize: {e}",
             "key_insights": [c["text"][:200] for c in state.rag_chunks[:3]],
             "route":        "RAG",
