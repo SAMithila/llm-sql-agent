@@ -190,3 +190,42 @@ limit. A 135MB SQLite file failed silently — the frontend showed
 
 **Production fix:** Use GCS signed URLs for direct browser-to-storage upload,
 bypassing Cloud Run entirely:
+
+## Bug 8: Northwind hardcoded in schema_inspector and validator
+**Date:** Phase 7 — Agentic RAG
+
+**Symptom:** After switching to Chinook, queries failed with
+"no such table: Genre". SQL generated correctly but validation
+failed against wrong database.
+
+**Root cause:** Two files had Northwind hardcoded:
+- tools/validator.py: DB_PATH = "../db/dev.db"  
+- tools/schema_inspector.py: TABLE_KEYWORDS with Northwind table names
+- guardrails/permissions.py: allowed_tables with Northwind table names
+
+**Fix:** 
+1. sed to update DB_PATH to chinook.db in validator.py
+2. Updated TABLE_KEYWORDS to Chinook tables in schema_inspector.py
+3. Rewrote permissions.py with dynamic column-based detection
+
+**Lesson:** Never hardcode table names in guardrails or schema
+mapping. Use dynamic inspection via SQLAlchemy inspect() so the
+system works with any database.
+
+
+## Bug 9: RAG route returning success=False
+**Date:** Phase 7 — Agentic RAG
+
+**Root cause:** Two separate issues:
+1. _format_rag_response() missing "success": True in return dict
+2. api/main.py used state.execution_success to determine success,
+   which is always False for RAG-only routes (no SQL executed)
+
+**Fix:**
+1. Added "success": True to both returns in _format_rag_response
+2. Changed main.py to use final_response.get("success") instead
+   of state.execution_success
+
+**Lesson:** Each route (SQL/RAG/BOTH) has different success
+signals. The API layer must check the final_response dict,
+not intermediate pipeline state flags.
