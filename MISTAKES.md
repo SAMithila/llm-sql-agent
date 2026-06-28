@@ -1,7 +1,7 @@
 # MISTAKES.md
 
 ## Bug 1: LLM hallucinating view columns
-**Date:** Phase 4
+**Phase 4** 
 
 **Symptom:** "What is the total revenue by product category?" failed 3 retries
 
@@ -28,7 +28,7 @@ context — the LLM cannot infer view structure from the name alone
 
 
 ## Bug 2: SQLite file upload endpoint missing from deployment
-**Date:** Phase 6 (Cloud Run Deployment)
+**DPhase 6** (Cloud Run Deployment)
 
 **Symptom:** `/connect/sqlite-upload` returned 404 on Cloud Run despite
 working locally. Browser showed "Network Error" on file upload.
@@ -52,7 +52,7 @@ This caused 4 separate "stale container" incidents in this session.
 
 
 ## Bug 3: Missing imports caused container startup failure
-**Date:** Phase 6 (Cloud Run Deployment)
+**Phase 6** (Cloud Run Deployment)
 
 **Symptom:** Cloud Run revision failed to start with:
 `NameError: name 'File' is not defined`
@@ -74,7 +74,7 @@ locally before deploying to catch syntax errors early.
 
 
 ## Bug 4: Syntax error from inline sed edit
-**Date:** Phase 6 (Cloud Run Deployment)
+**Phase 6** (Cloud Run Deployment)
 
 **Symptom:** Container failed to start with `SyntaxError: invalid syntax`
 on the sqlite_master query line.
@@ -94,7 +94,7 @@ any terminal-based file edit.
 
 
 ## Bug 5: CORS blocked on multipart upload endpoint
-**Date:** Phase 7 (UI deployment)
+**Phase 7** (UI deployment)
 
 **Symptom:** Browser console showed CORS error on `/connect/sqlite-upload`
 even though other endpoints worked fine.
@@ -125,7 +125,7 @@ A failed API request can masquerade as a CORS error in the browser console.
 
 
 ## Bug 6: React hydration mismatch (Error #418)
-**Date:** Phase 7 (UI deployment)
+**Phase 7** (UI deployment)
 
 **Symptom:** Console showed "Uncaught Error: Minified React error #418"
 (Hydration Mismatch). UI still rendered but with warnings.
@@ -157,7 +157,7 @@ all hook declarations — React hooks cannot appear after a conditional return.
 
 
 ## Bug 7: /disconnect endpoint missing from deployed API
-**Date:** Phase 6 (Cloud Run Deployment)
+**Phase 6:** (Cloud Run Deployment)
 
 **Symptom:** Browser console showed 404 on `/disconnect/{session_id}`.
 Frontend called disconnect on page load to validate stale sessions,
@@ -180,7 +180,7 @@ after deployment.
 
 
 ## Architecture Decision: File Upload Size Limit
-**Date:** Phase 6 (UI deployment)
+**Phase 6:** (UI deployment)
 
 **Problem:** Direct multipart POST to Cloud Run hits the 32MB request body
 limit. A 135MB SQLite file failed silently — the frontend showed
@@ -192,7 +192,7 @@ limit. A 135MB SQLite file failed silently — the frontend showed
 bypassing Cloud Run entirely:
 
 ## Bug 8: Northwind hardcoded in schema_inspector and validator
-**Date:** Phase 7 — Agentic RAG
+**Phase 7** — Agentic RAG
 
 **Symptom:** After switching to Chinook, queries failed with
 "no such table: Genre". SQL generated correctly but validation
@@ -214,7 +214,7 @@ system works with any database.
 
 
 ## Bug 9: RAG route returning success=False
-**Date:** Phase 7 — Agentic RAG
+**Phase 7:** — Agentic RAG
 
 **Root cause:** Two separate issues:
 1. _format_rag_response() missing "success": True in return dict
